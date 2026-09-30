@@ -4,13 +4,14 @@ import { selectCalendars, selectDefaultEventCalendar } from "@/application/selec
 import type { CalendarEvent, EventDraft } from "@/domain/model";
 import { addDays, atClockTime, toClockTime, toIsoDate } from "@/domain/time";
 import { Icon } from "../common/Icon";
-import { Modal } from "../common/Modal";
 import fields from "../common/fields.module.css";
 
 interface EventEditorProps {
   mode: "create" | "edit";
   event?: CalendarEvent;
   draft: EventDraft;
+  /** Lets the host keep the typed title when switching between event and task. */
+  onTitleChange?: (title: string) => void;
 }
 
 interface FormState {
@@ -63,7 +64,7 @@ function toDraft(form: FormState): EventDraft | string {
   return { ...common, time: { kind: "timed", start, end } };
 }
 
-export function EventEditor({ mode, event, draft }: EventEditorProps) {
+export function EventEditor({ mode, event, draft, onTitleChange }: EventEditorProps) {
   const calendars = useApp(selectCalendars);
   const defaultCalendar = useApp(selectDefaultEventCalendar);
   const today = useApp((s) => s.today);
@@ -100,9 +101,8 @@ export function EventEditor({ mode, event, draft }: EventEditorProps) {
   const calendar = writable.find((c) => c.id === form.calendarId);
 
   return (
-    <Modal title={mode === "edit" ? "Edit event" : "New event"} onClose={closeEditor}>
       <form className={fields.form} onSubmit={submit}>
-        <input className={fields.titleInput} placeholder="New event" value={form.title} onChange={(e) => set("title", e.target.value)} autoFocus aria-label="Title" />
+        <input className={fields.titleInput} placeholder="New event" value={form.title} onChange={(e) => { set("title", e.target.value); onTitleChange?.(e.target.value); }} autoFocus aria-label="Title" />
 
         <div className={fields.row}>
           <span className={fields.label}>
@@ -180,6 +180,5 @@ export function EventEditor({ mode, event, draft }: EventEditorProps) {
           </button>
         </div>
       </form>
-    </Modal>
   );
 }

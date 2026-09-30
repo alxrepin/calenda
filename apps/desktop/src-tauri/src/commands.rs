@@ -24,12 +24,16 @@ where
     F: FnOnce(Arc<AgendaService>) -> Result<T, CommandError> + Send + 'static,
 {
     let service = Arc::clone(&state.service);
-    tauri::async_runtime::spawn_blocking(move || f(service))
+    let result = tauri::async_runtime::spawn_blocking(move || f(service))
         .await
         .map_err(|e| CommandError {
             kind: "shell",
             message: e.to_string(),
-        })?
+        })?;
+    if let Err(err) = &result {
+        log::warn!("command failed: {} ({})", err.message, err.kind);
+    }
+    result
 }
 
 #[tauri::command]

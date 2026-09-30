@@ -1,14 +1,15 @@
 //! The single thread that owns the `EKEventStore`.
 
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use calenda_domain::{ChangeListener, DomainError, DomainResult};
 use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyObject, NSObjectProtocol, ProtocolObject};
 use objc2_event_kit::{EKEventStore, EKEventStoreChangedNotification};
-use objc2_foundation::NSNotificationCenter;
+use objc2_foundation::{NSDate, NSDefaultRunLoopMode, NSNotificationCenter, NSRunLoop};
 
 /// Runs on the worker thread with exclusive access to the store.
 pub(crate) type Job = Box<dyn FnOnce(&mut Store) + Send + 'static>;
@@ -74,6 +75,28 @@ impl Store {
 impl Drop for Store {
     fn drop(&mut self) {
         self.unobserve();
+    }
+}
+
+/// Waits for a value sent from an EventKit completion block.
+///
+/// Completion blocks normally arrive on a background queue, but some are
+/// delivered through the calling thread's run loop. Pumping the worker's run
+/// loop while waiting covers both without blocking the app's main thread.
+pub(crate) fn wait_for_completion<T>(rx: &Receiver<T>, timeout: Duration) -> Option<T> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match rx.recv_timeout(Duration::from_millis(20)) {
+            Ok(value) => return Some(value),
+            Err(RecvTimeoutError::Disconnected) => return None,
+            Err(RecvTimeoutError::Timeout) => {}
+        }
+        if Instant::now() >= deadline {
+            return None;
+        }
+        let run_loop = NSRunLoop::currentRunLoop();
+        let until = NSDate::dateWithTimeIntervalSinceNow(0.03);
+        unsafe { run_loop.runMode_beforeDate(NSDefaultRunLoopMode, &until) };
     }
 }
 

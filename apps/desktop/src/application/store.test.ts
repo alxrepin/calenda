@@ -90,4 +90,17 @@ describe("app store", () => {
     expect(results.reminders.map((r) => r.title)).toContain("Call with client");
     expect(store.getState().searchOpen).toBe(true);
   });
+
+  it("opens the create dialog on a kind, remembers it, and carries the title across a switch", async () => {
+    const { store } = await ready();
+    expect(store.getState().lastCreateKind).toBe("event");
+    store.getState().openCreate("reminder");
+    expect(store.getState().editor).toMatchObject({ kind: "reminder", mode: "create" });
+    expect(store.getState().lastCreateKind).toBe("reminder");
+    store.getState().openCreate("event", "Buy flowers");
+    expect(store.getState().editor).toMatchObject({ kind: "event", mode: "create", draft: { title: "Buy flowers" } });
+    store.getState().closeEditor();
+    expect(store.getState().editor).toBeNull();
+    expect(store.getState().lastCreateKind).toBe("event");
+  });
 });

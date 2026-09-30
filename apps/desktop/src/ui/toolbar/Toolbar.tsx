@@ -24,7 +24,8 @@ export function Toolbar() {
   const setSearchQuery = useApp((s) => s.setSearchQuery);
   const searchOpen = useApp((s) => s.searchOpen);
   const setSearchOpen = useApp((s) => s.setSearchOpen);
-  const openEditor = useApp((s) => s.openEditor);
+  const openCreate = useApp((s) => s.openCreate);
+  const lastCreateKind = useApp((s) => s.lastCreateKind);
   const [menuOpen, setMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -50,13 +51,9 @@ export function Toolbar() {
     return () => window.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
 
-  const newEvent = () => {
+  const add = (kind: "event" | "reminder") => {
     setMenuOpen(false);
-    openEditor({ kind: "event", mode: "create", draft: { calendarId: "", title: "", time: { kind: "allDay", first: "", last: "" } } });
-  };
-  const newReminder = () => {
-    setMenuOpen(false);
-    openEditor({ kind: "reminder", mode: "create", draft: { listId: "", title: "" } });
+    openCreate(kind);
   };
 
   const title = view === "day" ? formatDayTitle(anchor) : formatMonthTitle(anchor);
@@ -101,7 +98,7 @@ export function Toolbar() {
           {searchOpen && <SearchResults onClose={() => setSearchOpen(false)} />}
         </div>
         <div className={styles.add} ref={menuRef}>
-          <button type="button" className={styles.addMain} onClick={newEvent}>
+          <button type="button" className={styles.addMain} onClick={() => add(lastCreateKind)} title="Add (opens the kind you used last)">
             <Icon name="plus" size={15} strokeWidth={2.4} />
             Add
           </button>
@@ -110,11 +107,11 @@ export function Toolbar() {
           </button>
           {menuOpen && (
             <div className={styles.menu} role="menu">
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={newEvent}>
-                <Icon name="calendar" size={14} /> New event
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => add("event")}>
+                <Icon name="calendar" size={14} /> Event
               </button>
-              <button type="button" role="menuitem" className={styles.menuItem} onClick={newReminder}>
-                <Icon name="bell" size={14} /> New reminder
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={() => add("reminder")}>
+                <Icon name="checkCircle" size={14} /> Task
               </button>
             </div>
           )}

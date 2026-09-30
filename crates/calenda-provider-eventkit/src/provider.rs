@@ -17,12 +17,20 @@ use objc2_event_kit::{
 use objc2_foundation::{NSArray, NSError, NSURL};
 
 use crate::convert;
-use crate::worker::{Listeners, Store, Worker};
+use crate::worker::{wait_for_completion, Listeners, Store, Worker};
 
 /// How long to wait for the system permission dialog.
 const ACCESS_PROMPT_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 /// How long to wait for an asynchronous reminder fetch.
-const FETCH_TIMEOUT: Duration = Duration::from_secs(60);
+const FETCH_TIMEOUT: Duration = Duration::from_secs(20);
+
+fn entity_name(entity: EKEntityType) -> &'static str {
+    if entity == EKEntityType::Reminder {
+        "reminders"
+    } else {
+        "events"
+    }
+}
 
 pub struct EventKitProvider {
     worker: Worker,
@@ -46,8 +54,14 @@ impl EventKitProvider {
                 EKEventStore::authorizationStatusForEntityType(entity)
             });
             if current != AccessStatus::NotDetermined {
+                log::info!(
+                    "EventKit {} access already {:?}",
+                    entity_name(entity),
+                    current
+                );
                 return Ok(current);
             }
+            log::info!("EventKit requesting {} access", entity_name(entity));
             let (tx, rx) = mpsc::channel::<Result<bool, String>>();
             let block = block2::RcBlock::new(move |granted: Bool, err: *mut NSError| {
                 let result = if err.is_null() {
@@ -69,16 +83,20 @@ impl EventKitProvider {
                         .requestFullAccessToEventsWithCompletion(block2::RcBlock::as_ptr(&block)),
                 }
             }
-            let granted = rx
-                .recv_timeout(ACCESS_PROMPT_TIMEOUT)
-                .map_err(|_| DomainError::provider("timed out waiting for the access prompt"))?
+            let granted = wait_for_completion(&rx, ACCESS_PROMPT_TIMEOUT)
+                .ok_or_else(|| DomainError::provider("timed out waiting for the access prompt"))?
                 .map_err(DomainError::Provider)?;
             if granted {
                 store.recreate();
             }
-            Ok(convert::access_status(unsafe {
+            let status = convert::access_status(unsafe {
                 EKEventStore::authorizationStatusForEntityType(entity)
-            }))
+            });
+            log::info!(
+                "EventKit {} access prompt answered: granted={granted}, status={status:?}",
+                entity_name(entity)
+            );
+            Ok(status)
         })
     }
 }
@@ -305,11 +323,12 @@ fn fetch_reminders(store: &Store, query: &ReminderQuery) -> DomainResult<Vec<Rem
                 .store
                 .fetchRemindersMatchingPredicate_completion(&predicate, &block)
         };
-        let batch = rx
-            .recv_timeout(FETCH_TIMEOUT)
-            .map_err(|_| DomainError::provider("timed out fetching reminders"))?;
+        let batch = wait_for_completion(&rx, FETCH_TIMEOUT)
+            .ok_or_else(|| DomainError::provider("timed out fetching reminders"))?;
+        log::debug!("EventKit reminder fetch returned {} items", batch.len());
         all.extend(batch);
     }
+    log::info!("EventKit reminders fetched: {}", all.len());
     all.sort_by(|a, b| {
         a.due
             .map(|d| (d.date, d.time))
@@ -369,6 +388,14 @@ impl CalendarStore for EventKitProvider {
                         .map(|c| convert::calendar(c, CalendarKind::Reminders)),
                 );
             }
+            let lists = out.iter().filter(|c| c.kind == CalendarKind::Reminders).count();
+            log::info!(
+                "EventKit calendars: {} event calendars, {} reminder lists (event access {:?}, reminder access {:?})",
+                out.len() - lists,
+                lists,
+                convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(EKEntityType::Event) }),
+                convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(EKEntityType::Reminder) }),
+            );
             Ok(out)
         })
     }

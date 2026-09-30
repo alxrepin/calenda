@@ -9,6 +9,8 @@ import { Chip } from "../common/Chip";
 import { Icon } from "../common/Icon";
 import { Segmented } from "../common/Segmented";
 import { DetailsPane } from "./DetailsPane";
+import { openExternal } from "@/infrastructure/openExternal";
+import { accessLabel, SETTINGS_REMINDERS_URL } from "../sidebar/SettingsPopover";
 import styles from "./TasksPanel.module.css";
 
 export function TasksPanel() {
@@ -39,8 +41,8 @@ function TaskList() {
   const calendars = useApp(selectCalendars);
   const defaultList = useApp(selectDefaultReminderList);
   const createReminder = useApp((s) => s.createReminder);
-  const showInGrid = useApp((s) => s.workspace?.preferences.showRemindersInGrid ?? false);
-  const setShowInGrid = useApp((s) => s.setShowRemindersInGrid);
+  const access = useApp((s) => s.workspace?.reminderAccess ?? "notDetermined");
+  const refresh = useApp((s) => s.refresh);
   const byId = useMemo(() => selectCalendarMap(calendars), [calendars]);
   const groups = useMemo(() => groupReminders(reminders, today), [reminders, today]);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -55,14 +57,34 @@ function TaskList() {
 
   return (
     <div className={styles.scroll}>
+      {access !== "full" && (
+        <div className={styles.banner} role="status">
+          <strong>Tasks need Reminders access.</strong>
+          <span>Current state: {accessLabel(access)}.</span>
+          <div className={styles.bannerActions}>
+            {access === "notDetermined" ? (
+              <button type="button" className={styles.bannerBtn} onClick={() => void refresh()}>
+                Ask for access
+              </button>
+            ) : (
+              <button type="button" className={styles.bannerBtn} onClick={() => void openExternal(SETTINGS_REMINDERS_URL)}>
+                Open System Settings
+              </button>
+            )}
+            <button type="button" className={styles.bannerLink} onClick={() => void refresh()}>
+              Check again
+            </button>
+          </div>
+        </div>
+      )}
       <form className={styles.quickAdd} onSubmit={submitQuick}>
         <Icon name="plus" size={14} />
         <input
           className={styles.quickInput}
-          placeholder={defaultList ? `New reminder in ${defaultList.title}…` : "No writable list"}
+          placeholder={defaultList ? `New task in ${defaultList.title}…` : "No writable list"}
           value={quick}
           onChange={(e) => setQuick(e.target.value)}
-          aria-label="New reminder title"
+          aria-label="New task title"
           disabled={!defaultList}
         />
       </form>
@@ -77,10 +99,6 @@ function TaskList() {
           listColor={(id) => byId.get(id)?.color ?? "#8e8e93"}
         />
       ))}
-      <label className={styles.option}>
-        <Checkbox checked={showInGrid} label="Show timed reminders in the calendar grid" onChange={(v) => void setShowInGrid(v)} />
-        Show timed reminders in the grid
-      </label>
     </div>
   );
 }

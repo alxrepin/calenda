@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useApp } from "@/application/context";
 import { selectCalendars } from "@/application/selectors";
 import { filterCounts, type SidebarFilter } from "@/domain/filters";
@@ -6,14 +6,16 @@ import type { Calendar } from "@/domain/model";
 import { Checkbox } from "../common/Checkbox";
 import { Icon, type IconName } from "../common/Icon";
 import { MiniMonth } from "./MiniMonth";
+import { SettingsPopover } from "./SettingsPopover";
+import { openExternal } from "@/infrastructure/openExternal";
 import styles from "./Sidebar.module.css";
 
 const FILTERS: { key: SidebarFilter; label: string; icon: IconName; accent?: boolean; flag?: boolean }[] = [
   { key: "all", label: "All", icon: "grid", accent: true },
   { key: "events", label: "Events", icon: "calendar" },
-  { key: "reminders", label: "Reminders", icon: "bell" },
+  { key: "reminders", label: "Tasks", icon: "checkCircle" },
   { key: "highPriority", label: "High priority", icon: "flag", flag: true },
-  { key: "myTasks", label: "My tasks", icon: "checkCircle" },
+  { key: "myTasks", label: "My tasks", icon: "list" },
 ];
 
 export function Sidebar() {
@@ -24,7 +26,8 @@ export function Sidebar() {
   const setFilter = useApp((s) => s.setFilter);
   const events = useApp((s) => s.events);
   const reminders = useApp((s) => s.reminders);
-  const openEditor = useApp((s) => s.openEditor);
+  const openCreate = useApp((s) => s.openCreate);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const hiddenSet = useMemo(() => new Set(hidden), [hidden]);
   const counts = useMemo(() => filterCounts(events, reminders), [events, reminders]);
 
@@ -54,7 +57,7 @@ export function Sidebar() {
               className={styles.iconBtn}
               aria-label="New event"
               title="New event"
-              onClick={() => openEditor({ kind: "event", mode: "create", draft: { calendarId: "", title: "", time: { kind: "allDay", first: "", last: "" } } })}
+              onClick={() => openCreate("event")}
             >
               <Icon name="plus" size={14} />
             </button>
@@ -62,15 +65,15 @@ export function Sidebar() {
           {eventCalendars.map(row)}
         </section>
 
-        <section className={styles.section} aria-label="Reminder lists">
+        <section className={styles.section} aria-label="Task lists">
           <div className={styles.sectionHead}>
             <span className={styles.sectionTitle}>Lists</span>
             <button
               type="button"
               className={styles.iconBtn}
-              aria-label="New reminder"
-              title="New reminder"
-              onClick={() => openEditor({ kind: "reminder", mode: "create", draft: { listId: "", title: "" } })}
+              aria-label="New task"
+              title="New task"
+              onClick={() => openCreate("reminder")}
             >
               <Icon name="plus" size={14} />
             </button>
@@ -95,12 +98,13 @@ export function Sidebar() {
       </div>
 
       <div className={styles.footer}>
-        <button type="button" className={styles.iconBtn} aria-label="Settings" title="Settings">
+        <button type="button" className={styles.iconBtn} aria-label="Settings" title="Settings" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((o) => !o)}>
           <Icon name="gear" size={16} />
         </button>
-        <button type="button" className={styles.iconBtn} aria-label="Help" title="Help">
+        <button type="button" className={styles.iconBtn} aria-label="Help" title="Help" onClick={() => void openExternal("https://github.com/alxrepin/calenda")}>
           <Icon name="help" size={16} />
         </button>
+        {settingsOpen && <SettingsPopover onClose={() => setSettingsOpen(false)} />}
       </div>
     </aside>
   );

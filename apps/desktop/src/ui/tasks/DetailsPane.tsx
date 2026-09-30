@@ -23,7 +23,7 @@ export function DetailsPane() {
   if (!event && !reminder) {
     return (
       <div className={styles.pane}>
-        <div className={styles.empty}>Select an event or a reminder to see its details.</div>
+        <div className={styles.empty}>Select an event or a task to see its details.</div>
       </div>
     );
   }

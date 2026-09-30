@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useApp } from "@/application/context";
+import type { AccessStatus } from "@/domain/model";
 import { visibleDays } from "@/domain/time";
 import { openExternal } from "@/infrastructure/openExternal";
 import { MonthView } from "../calendar/MonthView";
@@ -11,8 +12,7 @@ import { TasksPanel } from "../tasks/TasksPanel";
 import { Toolbar } from "../toolbar/Toolbar";
 import styles from "./AppShell.module.css";
 
-const SETTINGS_CALENDARS = "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars";
-const SETTINGS_REMINDERS = "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders";
+import { accessLabel, SETTINGS_CALENDARS_URL } from "../sidebar/SettingsPopover";
 
 export function AppShell() {
   const status = useApp((s) => s.status);
@@ -39,14 +39,14 @@ export function AppShell() {
     );
   }
 
-  const noAccess = workspace && workspace.eventAccess !== "full" && workspace.reminderAccess !== "full";
+  const noEventAccess = workspace !== null && workspace.eventAccess !== "full";
 
   return (
     <div className={styles.shell}>
       <Sidebar />
       <main className={styles.main}>
         <Toolbar />
-        {noAccess ? <AccessGate /> : view === "month" ? <MonthView /> : <TimeGrid days={days} />}
+        {noEventAccess ? <AccessGate status={workspace.eventAccess} /> : view === "month" ? <MonthView /> : <TimeGrid days={days} />}
       </main>
       <TasksPanel />
       <EditorHost />
@@ -55,20 +55,23 @@ export function AppShell() {
   );
 }
 
-function AccessGate() {
+function AccessGate({ status }: { status: AccessStatus }) {
   const refresh = useApp((s) => s.refresh);
   return (
     <div className={styles.center}>
       <div className={styles.access}>
-        <div className={styles.accessTitle}>Calenda needs access to Calendars and Reminders</div>
-        <p>Grant full access in System Settings → Privacy &amp; Security, then come back here.</p>
+        <div className={styles.accessTitle}>Calenda needs full access to your Calendars</div>
+        <p>Current state: {accessLabel(status)}. Grant full access in System Settings → Privacy &amp; Security → Calendars.</p>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className={styles.accessBtn} onClick={() => void openExternal(SETTINGS_CALENDARS)}>
-            Open Calendars settings
-          </button>
-          <button type="button" className={styles.accessBtn} onClick={() => void openExternal(SETTINGS_REMINDERS)}>
-            Open Reminders settings
-          </button>
+          {status === "notDetermined" ? (
+            <button type="button" className={styles.accessBtn} onClick={() => void refresh()}>
+              Ask for access
+            </button>
+          ) : (
+            <button type="button" className={styles.accessBtn} onClick={() => void openExternal(SETTINGS_CALENDARS_URL)}>
+              Open System Settings
+            </button>
+          )}
         </div>
         <button type="button" onClick={() => void refresh()} style={{ color: "var(--accent)" }}>
           Check again

@@ -55,7 +55,13 @@ pnpm tauri build
 ```
 
 If access was denied, the app shows buttons that open the matching pane in
-System Settings → Privacy & Security.
+System Settings → Privacy & Security. The gear in the sidebar shows the
+current data source and the access state for Calendars and Reminders.
+
+Logs go to stdout in `tauri dev` and to
+`~/Library/Logs/dev.alxrepin.calenda/Calenda.log`; the EventKit provider logs
+access prompts, calendar and list counts, and reminder fetch results, which is
+the first thing to look at when something does not show up.
 
 Preferences (hidden calendars, "show timed reminders in the grid") are stored in
 `~/Library/Application Support/dev.alxrepin.calenda/preferences.json`.
@@ -87,6 +93,7 @@ on every platform.
 | `T` | today |
 | `←` `→` | previous / next period |
 | `D` `W` `M` | day / week / month view |
+| `+ Add` | new item, on the kind used last; the arrow next to it picks Event or Task |
 | double-click a slot, a day, or an event | create / edit |
 | drag an event | move it (15-minute snap; all-day bars move by day) |
 | `Esc` | close editor or search |
@@ -100,7 +107,8 @@ an item repeats, reminders with due date, optional due time, priority
 
 Not exposed by EventKit, so not in the app: reminder subtasks, tags, flags,
 sections and attachments. The reference design's coloured chips map to the
-reminder's **list**, and "High priority" maps to priority.
+reminder's **list**, and "High priority" maps to priority. In the UI reminders
+are called **tasks**; the code keeps the EventKit name.
 
 Recurrence rules are read (an event or reminder shows a repeat badge) but not
 edited; edits and moves apply to the single occurrence.

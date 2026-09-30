@@ -59,14 +59,15 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  flex: 0 1 auto;
+  /* Gives up all of its slack (down to min-width) before the title shrinks. */
+  flex: 0 100 auto;
 }
 
 .search {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 1 300px;
+  flex: 0 3 240px;
   min-width: 120px;
   height: 32px;
   padding: 0 10px;

@@ -3,13 +3,13 @@ import { useApp } from "@/application/context";
 import { selectCalendars, selectDefaultReminderList } from "@/application/selectors";
 import type { Priority, Reminder, ReminderDraft } from "@/domain/model";
 import { Icon } from "../common/Icon";
-import { Modal } from "../common/Modal";
 import fields from "../common/fields.module.css";
 
 interface ReminderEditorProps {
   mode: "create" | "edit";
   reminder?: Reminder;
   draft: ReminderDraft;
+  onTitleChange?: (title: string) => void;
 }
 
 interface FormState {
@@ -31,7 +31,7 @@ const PRIORITIES: { value: Priority; label: string }[] = [
   { value: "high", label: "High" },
 ];
 
-export function ReminderEditor({ mode, reminder, draft }: ReminderEditorProps) {
+export function ReminderEditor({ mode, reminder, draft, onTitleChange }: ReminderEditorProps) {
   const calendars = useApp(selectCalendars);
   const defaultList = useApp(selectDefaultReminderList);
   const today = useApp((s) => s.today);
@@ -57,7 +57,7 @@ export function ReminderEditor({ mode, reminder, draft }: ReminderEditorProps) {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim()) return setError("Give the reminder a title.");
+    if (!form.title.trim()) return setError("Give the task a title.");
     if (!form.listId) return setError("Pick a list.");
     const out: ReminderDraft = {
       listId: form.listId,
@@ -76,9 +76,8 @@ export function ReminderEditor({ mode, reminder, draft }: ReminderEditorProps) {
   const list = lists.find((c) => c.id === form.listId);
 
   return (
-    <Modal title={mode === "edit" ? "Edit reminder" : "New reminder"} onClose={closeEditor}>
       <form className={fields.form} onSubmit={submit}>
-        <input className={fields.titleInput} placeholder="New reminder" value={form.title} onChange={(e) => set("title", e.target.value)} autoFocus aria-label="Title" />
+        <input className={fields.titleInput} placeholder="New task" value={form.title} onChange={(e) => { set("title", e.target.value); onTitleChange?.(e.target.value); }} autoFocus aria-label="Title" />
 
         <div className={fields.row}>
           <span className={fields.label}>
@@ -154,10 +153,9 @@ export function ReminderEditor({ mode, reminder, draft }: ReminderEditorProps) {
             Cancel
           </button>
           <button type="submit" className={[fields.btn, fields.primary].join(" ")} disabled={busy}>
-            {mode === "edit" ? "Save" : "Add reminder"}
+            {mode === "edit" ? "Save" : "Add task"}
           </button>
         </div>
       </form>
-    </Modal>
   );
 }

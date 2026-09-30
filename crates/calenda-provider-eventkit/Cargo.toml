@@ -13,7 +13,7 @@ log.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSDate", "NSDateFormatter", "NSCalendar", "NSError", "NSNotification", "NSObject", "NSOperation", "NSPredicate", "NSString", "NSTimeZone", "NSURL", "NSValue", "NSEnumerator", "NSSet", "block2"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSDate", "NSDateFormatter", "NSCalendar", "NSError", "NSNotification", "NSObject", "NSOperation", "NSPredicate", "NSString", "NSTimeZone", "NSURL", "NSValue", "NSEnumerator", "NSSet", "NSRunLoop", "block2"] }
 objc2-event-kit = { version = "0.3", default-features = false, features = ["std", "EKAlarm", "EKCalendar", "EKCalendarItem", "EKError", "EKEvent", "EKEventStore", "EKObject", "EKParticipant", "EKRecurrenceRule", "EKReminder", "EKSource", "EKTypes", "block2", "objc2-app-kit", "objc2-core-graphics"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSColor", "NSColorSpace", "objc2-core-foundation"] }
 block2 = "0.6"

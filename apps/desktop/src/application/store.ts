@@ -57,6 +57,9 @@ export interface AppState {
   searchResults: SearchResults | null;
   searchOpen: boolean;
 
+  /** Which kind the "Add" button opens by default: the last one used. */
+  lastCreateKind: "event" | "reminder";
+
   notices: Notice[];
 }
 
@@ -85,6 +88,8 @@ export interface AppActions {
 
   select(selection: Selection | null): void;
   openEditor(editor: EditorState): void;
+  /** Opens the create dialog on the given kind, with an optional title carried over. */
+  openCreate(kind: "event" | "reminder", title?: string): void;
   closeEditor(): void;
   setRightTab(tab: "tasks" | "details"): void;
 
@@ -174,6 +179,7 @@ export function createAppStore(backend: Backend, options: StoreOptions = {}): Ap
       searchQuery: "",
       searchResults: null,
       searchOpen: false,
+      lastCreateKind: "event",
       notices: [],
 
       async init() {
@@ -358,7 +364,14 @@ export function createAppStore(backend: Backend, options: StoreOptions = {}): Ap
         set({ selection, rightTab: selection ? "details" : get().rightTab });
       },
       openEditor(editor) {
-        set({ editor });
+        set({ editor, lastCreateKind: editor.kind });
+      },
+      openCreate(kind, title = "") {
+        const editor: EditorState =
+          kind === "event"
+            ? { kind: "event", mode: "create", draft: { calendarId: "", title, time: { kind: "allDay", first: "", last: "" } } }
+            : { kind: "reminder", mode: "create", draft: { listId: "", title } };
+        set({ editor, lastCreateKind: kind });
       },
       closeEditor() {
         set({ editor: null });

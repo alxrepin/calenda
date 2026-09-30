@@ -65,7 +65,7 @@ export function SearchResults({ onClose }: { onClose: () => void }) {
       )}
       {results && results.reminders.length > 0 && (
         <>
-          <div className={styles.group}>Reminders</div>
+          <div className={styles.group}>Tasks</div>
           {results.reminders.slice(0, 12).map((r) => (
             <button key={r.id} type="button" className={styles.item} role="option" onClick={() => openReminder(r)}>
               <span className={styles.swatch} style={{ background: byId.get(r.listId)?.color ?? "#999" }} />
@@ -74,7 +74,7 @@ export function SearchResults({ onClose }: { onClose: () => void }) {
                   {r.title}
                 </span>
                 <span className={styles.meta}>
-                  {byId.get(r.listId)?.title ?? "Reminder"}
+                  {byId.get(r.listId)?.title ?? "Task"}
                   {r.due ? ` · ${formatRelativeDay(r.due.date, today)}${r.due.time ? ` ${formatClock(r.due.time)}` : ""}` : ""}
                 </span>
               </span>
