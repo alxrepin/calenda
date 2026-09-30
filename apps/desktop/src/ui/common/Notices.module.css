@@ -1,0 +1,35 @@
+.stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 200;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-md);
+  max-width: 360px;
+  font-size: var(--fs-sm);
+}
+
+.notice[data-tone="error"] {
+  border-left: 3px solid var(--danger);
+}
+
+.close {
+  color: var(--text-secondary);
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 4px;
+}
+.close:hover {
+  background: var(--bg-hover);
+}

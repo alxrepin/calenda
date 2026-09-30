@@ -1,0 +1,17 @@
+.chip {
+  --c: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  line-height: 16px;
+  color: color-mix(in srgb, var(--c) 100%, var(--event-text-base) var(--event-text-mix));
+  background: color-mix(in srgb, var(--c) 14%, var(--event-mix-base));
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -18,8 +18,22 @@ fn service() -> (AgendaService, Arc<MockProvider>) {
 }
 
 fn week_range() -> TimeRange {
-    let start = Local.from_local_datetime(&anchor().pred_opt().unwrap().pred_opt().unwrap().and_hms_opt(0, 0, 0).unwrap()).unwrap();
-    TimeRange::new(start.with_timezone(&Utc), (start + Duration::days(7)).with_timezone(&Utc)).unwrap()
+    let start = Local
+        .from_local_datetime(
+            &anchor()
+                .pred_opt()
+                .unwrap()
+                .pred_opt()
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .unwrap();
+    TimeRange::new(
+        start.with_timezone(&Utc),
+        (start + Duration::days(7)).with_timezone(&Utc),
+    )
+    .unwrap()
 }
 
 #[test]
@@ -66,10 +80,14 @@ fn move_event_keeps_duration() {
         .into_iter()
         .find(|e| e.title == "Team sync")
         .unwrap();
-    let EventTime::Timed(original) = &event.time else { panic!("timed") };
+    let EventTime::Timed(original) = &event.time else {
+        panic!("timed")
+    };
     let new_start = original.start() + Duration::days(1) + Duration::hours(3);
     let moved = service.move_event(&event, new_start, anchor()).unwrap();
-    let EventTime::Timed(after) = &moved.time else { panic!("timed") };
+    let EventTime::Timed(after) = &moved.time else {
+        panic!("timed")
+    };
     assert_eq!(after.start(), new_start);
     assert_eq!(after.duration(), original.duration());
 }
@@ -127,10 +145,16 @@ fn blank_titles_are_rejected() {
 #[test]
 fn search_spans_events_and_reminders() {
     let (service, _) = service();
-    let now = Local.from_local_datetime(&anchor().and_hms_opt(12, 0, 0).unwrap()).unwrap().with_timezone(&Utc);
+    let now = Local
+        .from_local_datetime(&anchor().and_hms_opt(12, 0, 0).unwrap())
+        .unwrap()
+        .with_timezone(&Utc);
     let results = service.search("client", now).unwrap();
     assert!(results.events.iter().any(|e| e.title == "Call with client"));
-    assert!(results.reminders.iter().any(|r| r.title == "Call with client"));
+    assert!(results
+        .reminders
+        .iter()
+        .any(|r| r.title == "Call with client"));
     assert!(service.search("   ", now).unwrap().events.is_empty());
 }
 

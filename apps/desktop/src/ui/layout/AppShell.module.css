@@ -1,0 +1,47 @@
+.shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-window);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: var(--fs-md);
+}
+
+.access {
+  max-width: 420px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.accessTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.accessBtn {
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+}

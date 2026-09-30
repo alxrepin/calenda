@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use calenda_domain::{
     AccessStatus, Calendar, CalendarId, CalendarKind, CalendarProvider, ChangeListener,
-    CompletionFilter, DomainError, DomainResult, Event, EventDraft, EventId,
-    EventQuery, EventTime, RecurrenceScope, Reminder, ReminderDraft, ReminderId,
-    ReminderQuery, Subscription, TimeRange,
+    CompletionFilter, DomainError, DomainResult, Event, EventDraft, EventId, EventQuery, EventTime,
+    RecurrenceScope, Reminder, ReminderDraft, ReminderId, ReminderQuery, Subscription, TimeRange,
 };
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 
@@ -25,8 +24,14 @@ pub struct AgendaService {
 }
 
 impl AgendaService {
-    pub fn new(provider: Arc<dyn CalendarProvider>, preferences: Arc<dyn PreferencesRepository>) -> Self {
-        Self { provider, preferences }
+    pub fn new(
+        provider: Arc<dyn CalendarProvider>,
+        preferences: Arc<dyn PreferencesRepository>,
+    ) -> Self {
+        Self {
+            provider,
+            preferences,
+        }
     }
 
     pub fn provider_name(&self) -> &'static str {
@@ -38,14 +43,12 @@ impl AgendaService {
     /// Loads sources, calendars and preferences. Asks for platform access on
     /// first use; later calls just report the stored decision.
     pub fn workspace(&self) -> DomainResult<Workspace> {
-        let event_access = self.ensure_access(
-            self.provider.event_access(),
-            || self.provider.request_event_access(),
-        )?;
-        let reminder_access = self.ensure_access(
-            self.provider.reminder_access(),
-            || self.provider.request_reminder_access(),
-        )?;
+        let event_access = self.ensure_access(self.provider.event_access(), || {
+            self.provider.request_event_access()
+        })?;
+        let reminder_access = self.ensure_access(self.provider.reminder_access(), || {
+            self.provider.request_reminder_access()
+        })?;
 
         let readable = event_access.can_read() || reminder_access.can_read();
         let (sources, calendars) = if readable {
@@ -78,7 +81,11 @@ impl AgendaService {
         self.preferences.load()
     }
 
-    pub fn set_calendar_visible(&self, id: &CalendarId, visible: bool) -> DomainResult<Preferences> {
+    pub fn set_calendar_visible(
+        &self,
+        id: &CalendarId,
+        visible: bool,
+    ) -> DomainResult<Preferences> {
         let mut prefs = self.preferences.load()?;
         if visible {
             prefs.hidden_calendars.remove(id);
@@ -104,7 +111,10 @@ impl AgendaService {
         if calendars.is_empty() {
             return Ok(Vec::new());
         }
-        self.provider.events(&EventQuery { range, calendars: Some(calendars) })
+        self.provider.events(&EventQuery {
+            range,
+            calendars: Some(calendars),
+        })
     }
 
     pub fn create_event(&self, draft: EventDraft) -> DomainResult<Event> {
@@ -112,7 +122,12 @@ impl AgendaService {
         self.provider.create_event(draft.validated()?)
     }
 
-    pub fn update_event(&self, id: &EventId, draft: EventDraft, scope: RecurrenceScope) -> DomainResult<Event> {
+    pub fn update_event(
+        &self,
+        id: &EventId,
+        draft: EventDraft,
+        scope: RecurrenceScope,
+    ) -> DomainResult<Event> {
         self.guard_writable(&draft.calendar_id)?;
         self.provider.update_event(id, draft.validated()?, scope)
     }
@@ -123,7 +138,12 @@ impl AgendaService {
 
     /// Drag-and-drop: keeps everything about the event except *when*. A timed
     /// event keeps its duration; an all-day event keeps its length in days.
-    pub fn move_event(&self, event: &Event, new_start: DateTime<Utc>, new_day: NaiveDate) -> DomainResult<Event> {
+    pub fn move_event(
+        &self,
+        event: &Event,
+        new_start: DateTime<Utc>,
+        new_day: NaiveDate,
+    ) -> DomainResult<Event> {
         if event.read_only {
             return Err(DomainError::ReadOnly { entity: "event" });
         }
@@ -139,14 +159,19 @@ impl AgendaService {
             notes: event.notes.clone(),
             url: event.url.clone(),
         };
-        self.provider.update_event(&event.id, draft, RecurrenceScope::ThisOccurrence)
+        self.provider
+            .update_event(&event.id, draft, RecurrenceScope::ThisOccurrence)
     }
 
     // ---- reminders ------------------------------------------------------
 
     /// Incomplete reminders plus those completed in the last `completed_window`
     /// (so a just-ticked task does not vanish), from visible lists only.
-    pub fn reminders(&self, now: DateTime<Utc>, completed_window: Duration) -> DomainResult<Vec<Reminder>> {
+    pub fn reminders(
+        &self,
+        now: DateTime<Utc>,
+        completed_window: Duration,
+    ) -> DomainResult<Vec<Reminder>> {
         let lists = self.visible_ids(CalendarKind::Reminders)?;
         if lists.is_empty() {
             return Ok(Vec::new());
@@ -167,7 +192,11 @@ impl AgendaService {
         self.provider.update_reminder(id, draft.validated()?)
     }
 
-    pub fn set_reminder_completed(&self, id: &ReminderId, completed: bool) -> DomainResult<Reminder> {
+    pub fn set_reminder_completed(
+        &self,
+        id: &ReminderId,
+        completed: bool,
+    ) -> DomainResult<Reminder> {
         self.provider.set_reminder_completed(id, completed)
     }
 
@@ -199,7 +228,10 @@ impl AgendaService {
         let mut reminders = if lists.is_empty() {
             Vec::new()
         } else {
-            self.provider.reminders(&ReminderQuery { completion: CompletionFilter::All, lists: Some(lists) })?
+            self.provider.reminders(&ReminderQuery {
+                completion: CompletionFilter::All,
+                lists: Some(lists),
+            })?
         };
         reminders.retain(|r| {
             matches(&r.title, &needle) || r.notes.as_deref().is_some_and(|s| matches(s, &needle))
@@ -240,7 +272,10 @@ impl AgendaService {
             .calendars()?
             .into_iter()
             .find(|c| &c.id == id)
-            .ok_or_else(|| DomainError::NotFound { entity: "calendar", id: id.to_string() })
+            .ok_or_else(|| DomainError::NotFound {
+                entity: "calendar",
+                id: id.to_string(),
+            })
     }
 }
 

@@ -33,12 +33,18 @@ pub struct EventKitProvider {
 impl EventKitProvider {
     pub fn new() -> Self {
         let listeners: Listeners = Arc::new(Mutex::new(Vec::new()));
-        Self { worker: Worker::spawn(Arc::clone(&listeners)), listeners, next_listener: Mutex::new(0) }
+        Self {
+            worker: Worker::spawn(Arc::clone(&listeners)),
+            listeners,
+            next_listener: Mutex::new(0),
+        }
     }
 
     fn request_access(&self, entity: EKEntityType) -> DomainResult<AccessStatus> {
         self.worker.run(move |store| {
-            let current = convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(entity) });
+            let current = convert::access_status(unsafe {
+                EKEventStore::authorizationStatusForEntityType(entity)
+            });
             if current != AccessStatus::NotDetermined {
                 return Ok(current);
             }
@@ -53,8 +59,14 @@ impl EventKitProvider {
             });
             unsafe {
                 match entity {
-                    EKEntityType::Reminder => store.store.requestFullAccessToRemindersWithCompletion(block2::RcBlock::as_ptr(&block)),
-                    _ => store.store.requestFullAccessToEventsWithCompletion(block2::RcBlock::as_ptr(&block)),
+                    EKEntityType::Reminder => {
+                        store.store.requestFullAccessToRemindersWithCompletion(
+                            block2::RcBlock::as_ptr(&block),
+                        )
+                    }
+                    _ => store
+                        .store
+                        .requestFullAccessToEventsWithCompletion(block2::RcBlock::as_ptr(&block)),
                 }
             }
             let granted = rx
@@ -64,7 +76,9 @@ impl EventKitProvider {
             if granted {
                 store.recreate();
             }
-            Ok(convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(entity) }))
+            Ok(convert::access_status(unsafe {
+                EKEventStore::authorizationStatusForEntityType(entity)
+            }))
         })
     }
 }
@@ -82,21 +96,37 @@ fn calendars_of(store: &Store, entity: EKEntityType) -> Vec<Retained<EKCalendar>
 }
 
 fn find_calendar(store: &Store, id: &CalendarId) -> DomainResult<Retained<EKCalendar>> {
-    unsafe { store.store.calendarWithIdentifier(&convert::ns_string(id.as_str())) }
-        .ok_or_else(|| DomainError::NotFound { entity: "calendar", id: id.to_string() })
+    unsafe {
+        store
+            .store
+            .calendarWithIdentifier(&convert::ns_string(id.as_str()))
+    }
+    .ok_or_else(|| DomainError::NotFound {
+        entity: "calendar",
+        id: id.to_string(),
+    })
 }
 
-fn calendar_array(store: &Store, ids: &[CalendarId]) -> DomainResult<Retained<NSArray<EKCalendar>>> {
-    let calendars = ids.iter().map(|id| find_calendar(store, id)).collect::<DomainResult<Vec<_>>>()?;
+fn calendar_array(
+    store: &Store,
+    ids: &[CalendarId],
+) -> DomainResult<Retained<NSArray<EKCalendar>>> {
+    let calendars = ids
+        .iter()
+        .map(|id| find_calendar(store, id))
+        .collect::<DomainResult<Vec<_>>>()?;
     Ok(NSArray::from_retained_slice(&calendars))
 }
 
 fn read_only(calendar: Option<Retained<EKCalendar>>) -> bool {
-    calendar.map(|c| !unsafe { c.allowsContentModifications() }).unwrap_or(true)
+    calendar
+        .map(|c| !unsafe { c.allowsContentModifications() })
+        .unwrap_or(true)
 }
 
 fn require_full_access(entity: EKEntityType, name: &'static str) -> DomainResult<()> {
-    match convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(entity) }) {
+    match convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(entity) })
+    {
         AccessStatus::Full => Ok(()),
         _ => Err(DomainError::AccessDenied { entity: name }),
     }
@@ -105,7 +135,10 @@ fn require_full_access(entity: EKEntityType, name: &'static str) -> DomainResult
 /// Finds the `EKEvent` for a domain id, including a specific occurrence of a
 /// recurring event.
 fn find_event(store: &Store, id: &EventId) -> DomainResult<Retained<EKEvent>> {
-    let not_found = || DomainError::NotFound { entity: "event", id: id.to_string() };
+    let not_found = || DomainError::NotFound {
+        entity: "event",
+        id: id.to_string(),
+    };
     let (identifier, occurrence) = convert::parse_event_id(id);
     let ns_id = convert::ns_string(&identifier);
     let Some(occurrence) = occurrence else {
@@ -116,21 +149,36 @@ fn find_event(store: &Store, id: &EventId) -> DomainResult<Retained<EKEvent>> {
     // matches the window around it.
     let window = chrono::Duration::days(2);
     let predicate = unsafe {
-        store.store.predicateForEventsWithStartDate_endDate_calendars(
-            &convert::ns_date(occurrence - window),
-            &convert::ns_date(occurrence + window),
-            None,
-        )
+        store
+            .store
+            .predicateForEventsWithStartDate_endDate_calendars(
+                &convert::ns_date(occurrence - window),
+                &convert::ns_date(occurrence + window),
+                None,
+            )
     };
     let candidates = unsafe { store.store.eventsMatchingPredicate(&predicate) };
-    candidates.iter().find(|e| convert::event_id(e) == *id).ok_or_else(not_found)
+    candidates
+        .iter()
+        .find(|e| convert::event_id(e) == *id)
+        .ok_or_else(not_found)
 }
 
 fn find_reminder(store: &Store, id: &ReminderId) -> DomainResult<Retained<EKReminder>> {
-    let item = unsafe { store.store.calendarItemWithIdentifier(&convert::ns_string(id.as_str())) }
-        .ok_or_else(|| DomainError::NotFound { entity: "reminder", id: id.to_string() })?;
+    let item = unsafe {
+        store
+            .store
+            .calendarItemWithIdentifier(&convert::ns_string(id.as_str()))
+    }
+    .ok_or_else(|| DomainError::NotFound {
+        entity: "reminder",
+        id: id.to_string(),
+    })?;
     item.downcast::<EKReminder>()
-        .map_err(|_| DomainError::NotFound { entity: "reminder", id: id.to_string() })
+        .map_err(|_| DomainError::NotFound {
+            entity: "reminder",
+            id: id.to_string(),
+        })
 }
 
 fn apply_event_draft(store: &Store, event: &EKEvent, draft: &EventDraft) -> DomainResult<()> {
@@ -147,12 +195,22 @@ fn apply_event_draft(store: &Store, event: &EKEvent, draft: &EventDraft) -> Doma
         event.setEndDate(Some(&convert::ns_date(end)));
         event.setLocation(draft.location.as_deref().map(convert::ns_string).as_deref());
         event.setNotes(draft.notes.as_deref().map(convert::ns_string).as_deref());
-        event.setURL(draft.url.as_deref().and_then(|u| NSURL::URLWithString(&convert::ns_string(u))).as_deref());
+        event.setURL(
+            draft
+                .url
+                .as_deref()
+                .and_then(|u| NSURL::URLWithString(&convert::ns_string(u)))
+                .as_deref(),
+        );
     }
     Ok(())
 }
 
-fn apply_reminder_draft(store: &Store, reminder: &EKReminder, draft: &ReminderDraft) -> DomainResult<()> {
+fn apply_reminder_draft(
+    store: &Store,
+    reminder: &EKReminder,
+    draft: &ReminderDraft,
+) -> DomainResult<()> {
     let list = find_calendar(store, &draft.list_id)?;
     if !unsafe { list.allowsContentModifications() } {
         return Err(DomainError::ReadOnly { entity: "calendar" });
@@ -161,12 +219,22 @@ fn apply_reminder_draft(store: &Store, reminder: &EKReminder, draft: &ReminderDr
         reminder.setCalendar(Some(&list));
         reminder.setTitle(Some(&convert::ns_string(&draft.title)));
         reminder.setNotes(draft.notes.as_deref().map(convert::ns_string).as_deref());
-        reminder.setURL(draft.url.as_deref().and_then(|u| NSURL::URLWithString(&convert::ns_string(u))).as_deref());
+        reminder.setURL(
+            draft
+                .url
+                .as_deref()
+                .and_then(|u| NSURL::URLWithString(&convert::ns_string(u)))
+                .as_deref(),
+        );
         reminder.setPriority(draft.priority.to_rfc5545() as usize);
         reminder.setDueDateComponents(draft.due.as_ref().map(convert::due_components).as_deref());
         // Reminders.app notifies at the due time through an alarm; EventKit
         // does not add one for us.
-        let alarm = draft.due.as_ref().and_then(convert::due_instant).map(|at| EKAlarm::alarmWithAbsoluteDate(&convert::ns_date(at)));
+        let alarm = draft
+            .due
+            .as_ref()
+            .and_then(convert::due_instant)
+            .map(|at| EKAlarm::alarmWithAbsoluteDate(&convert::ns_date(at)));
         reminder.setAlarms(alarm.map(|a| NSArray::from_retained_slice(&[a])).as_deref());
     }
     Ok(())
@@ -188,19 +256,33 @@ fn fetch_reminders(store: &Store, query: &ReminderQuery) -> DomainResult<Vec<Rem
 
     // Incomplete reminders are always wanted; completed ones depend on the filter.
     let mut predicates = vec![unsafe {
-        store.store.predicateForIncompleteRemindersWithDueDateStarting_ending_calendars(None, None, calendars_ref)
+        store
+            .store
+            .predicateForIncompleteRemindersWithDueDateStarting_ending_calendars(
+                None,
+                None,
+                calendars_ref,
+            )
     }];
     match query.completion {
         CompletionFilter::IncompleteOnly => {}
         CompletionFilter::CompletedSince(since) => predicates.push(unsafe {
-            store.store.predicateForCompletedRemindersWithCompletionDateStarting_ending_calendars(
-                Some(&convert::ns_date(since)),
-                None,
-                calendars_ref,
-            )
+            store
+                .store
+                .predicateForCompletedRemindersWithCompletionDateStarting_ending_calendars(
+                    Some(&convert::ns_date(since)),
+                    None,
+                    calendars_ref,
+                )
         }),
         CompletionFilter::All => predicates.push(unsafe {
-            store.store.predicateForCompletedRemindersWithCompletionDateStarting_ending_calendars(None, None, calendars_ref)
+            store
+                .store
+                .predicateForCompletedRemindersWithCompletionDateStarting_ending_calendars(
+                    None,
+                    None,
+                    calendars_ref,
+                )
         }),
     }
 
@@ -211,17 +293,28 @@ fn fetch_reminders(store: &Store, query: &ReminderQuery) -> DomainResult<Vec<Rem
             let converted = if reminders.is_null() {
                 Vec::new()
             } else {
-                unsafe { &*reminders }.iter().map(|r| convert::reminder(&r)).collect()
+                unsafe { &*reminders }
+                    .iter()
+                    .map(|r| convert::reminder(&r))
+                    .collect()
             };
             let _ = tx.send(converted);
         });
-        let _request = unsafe { store.store.fetchRemindersMatchingPredicate_completion(&predicate, &block) };
+        let _request = unsafe {
+            store
+                .store
+                .fetchRemindersMatchingPredicate_completion(&predicate, &block)
+        };
         let batch = rx
             .recv_timeout(FETCH_TIMEOUT)
             .map_err(|_| DomainError::provider("timed out fetching reminders"))?;
         all.extend(batch);
     }
-    all.sort_by(|a, b| a.due.map(|d| (d.date, d.time)).cmp(&b.due.map(|d| (d.date, d.time))));
+    all.sort_by(|a, b| {
+        a.due
+            .map(|d| (d.date, d.time))
+            .cmp(&b.due.map(|d| (d.date, d.time)))
+    });
     Ok(all)
 }
 
@@ -229,11 +322,15 @@ fn fetch_reminders(store: &Store, query: &ReminderQuery) -> DomainResult<Vec<Rem
 
 impl AccessGateway for EventKitProvider {
     fn event_access(&self) -> AccessStatus {
-        convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(EKEntityType::Event) })
+        convert::access_status(unsafe {
+            EKEventStore::authorizationStatusForEntityType(EKEntityType::Event)
+        })
     }
 
     fn reminder_access(&self) -> AccessStatus {
-        convert::access_status(unsafe { EKEventStore::authorizationStatusForEntityType(EKEntityType::Reminder) })
+        convert::access_status(unsafe {
+            EKEventStore::authorizationStatusForEntityType(EKEntityType::Reminder)
+        })
     }
 
     fn request_event_access(&self) -> DomainResult<AccessStatus> {
@@ -247,17 +344,30 @@ impl AccessGateway for EventKitProvider {
 
 impl CalendarStore for EventKitProvider {
     fn sources(&self) -> DomainResult<Vec<Source>> {
-        self.worker.run(|store| Ok(unsafe { store.store.sources() }.iter().map(|s| convert::source(&s)).collect()))
+        self.worker.run(|store| {
+            Ok(unsafe { store.store.sources() }
+                .iter()
+                .map(|s| convert::source(&s))
+                .collect())
+        })
     }
 
     fn calendars(&self) -> DomainResult<Vec<Calendar>> {
         self.worker.run(|store| {
             let mut out = Vec::new();
             if require_full_access(EKEntityType::Event, "events").is_ok() {
-                out.extend(calendars_of(store, EKEntityType::Event).iter().map(|c| convert::calendar(c, CalendarKind::Events)));
+                out.extend(
+                    calendars_of(store, EKEntityType::Event)
+                        .iter()
+                        .map(|c| convert::calendar(c, CalendarKind::Events)),
+                );
             }
             if require_full_access(EKEntityType::Reminder, "reminders").is_ok() {
-                out.extend(calendars_of(store, EKEntityType::Reminder).iter().map(|c| convert::calendar(c, CalendarKind::Reminders)));
+                out.extend(
+                    calendars_of(store, EKEntityType::Reminder)
+                        .iter()
+                        .map(|c| convert::calendar(c, CalendarKind::Reminders)),
+                );
             }
             Ok(out)
         })
@@ -274,11 +384,13 @@ impl EventRepository for EventKitProvider {
                 None => None,
             };
             let predicate = unsafe {
-                store.store.predicateForEventsWithStartDate_endDate_calendars(
-                    &convert::ns_date(query.range.start()),
-                    &convert::ns_date(query.range.end()),
-                    calendars.as_deref(),
-                )
+                store
+                    .store
+                    .predicateForEventsWithStartDate_endDate_calendars(
+                        &convert::ns_date(query.range.start()),
+                        &convert::ns_date(query.range.end()),
+                        calendars.as_deref(),
+                    )
             };
             let found = unsafe { store.store.eventsMatchingPredicate(&predicate) };
             let mut events = found
@@ -296,13 +408,22 @@ impl EventRepository for EventKitProvider {
             require_full_access(EKEntityType::Event, "events")?;
             let event = unsafe { EKEvent::eventWithEventStore(&store.store) };
             apply_event_draft(store, &event, &draft)?;
-            unsafe { store.store.saveEvent_span_commit_error(&event, EKSpan::ThisEvent, true) }
-                .map_err(|e| convert::error(&e))?;
+            unsafe {
+                store
+                    .store
+                    .saveEvent_span_commit_error(&event, EKSpan::ThisEvent, true)
+            }
+            .map_err(|e| convert::error(&e))?;
             convert::event(&event, false)
         })
     }
 
-    fn update_event(&self, id: &EventId, draft: EventDraft, scope: RecurrenceScope) -> DomainResult<Event> {
+    fn update_event(
+        &self,
+        id: &EventId,
+        draft: EventDraft,
+        scope: RecurrenceScope,
+    ) -> DomainResult<Event> {
         let id = id.clone();
         self.worker.run(move |store| {
             require_full_access(EKEntityType::Event, "events")?;
@@ -311,8 +432,12 @@ impl EventRepository for EventKitProvider {
                 return Err(DomainError::ReadOnly { entity: "event" });
             }
             apply_event_draft(store, &event, &draft)?;
-            unsafe { store.store.saveEvent_span_commit_error(&event, span(scope), true) }
-                .map_err(|e| convert::error(&e))?;
+            unsafe {
+                store
+                    .store
+                    .saveEvent_span_commit_error(&event, span(scope), true)
+            }
+            .map_err(|e| convert::error(&e))?;
             convert::event(&event, false)
         })
     }
@@ -325,8 +450,12 @@ impl EventRepository for EventKitProvider {
             if read_only(unsafe { event.calendar() }) {
                 return Err(DomainError::ReadOnly { entity: "event" });
             }
-            unsafe { store.store.removeEvent_span_commit_error(&event, span(scope), true) }
-                .map_err(|e| convert::error(&e))
+            unsafe {
+                store
+                    .store
+                    .removeEvent_span_commit_error(&event, span(scope), true)
+            }
+            .map_err(|e| convert::error(&e))
         })
     }
 }
@@ -345,7 +474,8 @@ impl ReminderRepository for EventKitProvider {
             require_full_access(EKEntityType::Reminder, "reminders")?;
             let reminder = unsafe { EKReminder::reminderWithEventStore(&store.store) };
             apply_reminder_draft(store, &reminder, &draft)?;
-            unsafe { store.store.saveReminder_commit_error(&reminder, true) }.map_err(|e| convert::error(&e))?;
+            unsafe { store.store.saveReminder_commit_error(&reminder, true) }
+                .map_err(|e| convert::error(&e))?;
             Ok(convert::reminder(&reminder))
         })
     }
@@ -356,7 +486,8 @@ impl ReminderRepository for EventKitProvider {
             require_full_access(EKEntityType::Reminder, "reminders")?;
             let reminder = find_reminder(store, &id)?;
             apply_reminder_draft(store, &reminder, &draft)?;
-            unsafe { store.store.saveReminder_commit_error(&reminder, true) }.map_err(|e| convert::error(&e))?;
+            unsafe { store.store.saveReminder_commit_error(&reminder, true) }
+                .map_err(|e| convert::error(&e))?;
             Ok(convert::reminder(&reminder))
         })
     }
@@ -367,7 +498,8 @@ impl ReminderRepository for EventKitProvider {
             require_full_access(EKEntityType::Reminder, "reminders")?;
             let reminder = find_reminder(store, &id)?;
             unsafe { reminder.setCompleted(completed) };
-            unsafe { store.store.saveReminder_commit_error(&reminder, true) }.map_err(|e| convert::error(&e))?;
+            unsafe { store.store.saveReminder_commit_error(&reminder, true) }
+                .map_err(|e| convert::error(&e))?;
             Ok(convert::reminder(&reminder))
         })
     }
@@ -377,7 +509,8 @@ impl ReminderRepository for EventKitProvider {
         self.worker.run(move |store| {
             require_full_access(EKEntityType::Reminder, "reminders")?;
             let reminder = find_reminder(store, &id)?;
-            unsafe { store.store.removeReminder_commit_error(&reminder, true) }.map_err(|e| convert::error(&e))
+            unsafe { store.store.removeReminder_commit_error(&reminder, true) }
+                .map_err(|e| convert::error(&e))
         })
     }
 }
@@ -391,7 +524,10 @@ impl Subscription for EventKitSubscription {}
 
 impl Drop for EventKitSubscription {
     fn drop(&mut self) {
-        self.listeners.lock().unwrap_or_else(|e| e.into_inner()).retain(|(id, _)| *id != self.id);
+        self.listeners
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .retain(|(id, _)| *id != self.id);
     }
 }
 
@@ -402,8 +538,14 @@ impl ChangeNotifier for EventKitProvider {
             *next += 1;
             *next
         };
-        self.listeners.lock().unwrap_or_else(|e| e.into_inner()).push((id, listener));
-        Box::new(EventKitSubscription { id, listeners: Arc::clone(&self.listeners) })
+        self.listeners
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push((id, listener));
+        Box::new(EventKitSubscription {
+            id,
+            listeners: Arc::clone(&self.listeners),
+        })
     }
 }
 
@@ -412,4 +554,3 @@ impl CalendarProvider for EventKitProvider {
         "EventKit"
     }
 }
-

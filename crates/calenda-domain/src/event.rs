@@ -92,7 +92,9 @@ mod tests {
         EventDraft {
             calendar_id: CalendarId::new("cal"),
             title: title.to_owned(),
-            time: EventTime::AllDay(DateSpan::single(NaiveDate::from_ymd_opt(2026, 9, 30).unwrap())),
+            time: EventTime::AllDay(DateSpan::single(
+                NaiveDate::from_ymd_opt(2026, 9, 30).unwrap(),
+            )),
             location: Some("  ".to_owned()),
             notes: Some(" note ".to_owned()),
             url: None,

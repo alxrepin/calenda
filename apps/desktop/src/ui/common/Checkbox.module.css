@@ -1,0 +1,35 @@
+.box {
+  --c: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: #fff;
+  flex: 0 0 auto;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.box[data-checked="true"] {
+  background: var(--c);
+  border-color: var(--c);
+}
+
+.round {
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  border-color: var(--text-tertiary);
+}
+
+.round[data-checked="true"] {
+  background: var(--text-tertiary);
+  border-color: var(--text-tertiary);
+}
+
+.round:hover {
+  border-color: var(--accent);
+}

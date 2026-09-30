@@ -29,7 +29,11 @@ impl From<&Preferences> for StoredPreferences {
 impl From<StoredPreferences> for Preferences {
     fn from(s: StoredPreferences) -> Self {
         Self {
-            hidden_calendars: s.hidden_calendars.into_iter().map(CalendarId::new).collect(),
+            hidden_calendars: s
+                .hidden_calendars
+                .into_iter()
+                .map(CalendarId::new)
+                .collect(),
             show_reminders_in_grid: s.show_reminders_in_grid,
         }
     }
@@ -48,7 +52,10 @@ impl JsonFilePreferences {
     }
 
     pub fn at(path: PathBuf) -> Self {
-        Self { path, lock: Mutex::new(()) }
+        Self {
+            path,
+            lock: Mutex::new(()),
+        }
     }
 }
 
@@ -60,20 +67,25 @@ impl PreferencesRepository for JsonFilePreferences {
                 .map(Preferences::from)
                 .map_err(|e| DomainError::provider(format!("preferences file is corrupt: {e}"))),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Preferences::default()),
-            Err(e) => Err(DomainError::provider(format!("cannot read preferences: {e}"))),
+            Err(e) => Err(DomainError::provider(format!(
+                "cannot read preferences: {e}"
+            ))),
         }
     }
 
     fn save(&self, preferences: &Preferences) -> DomainResult<()> {
         let _guard = self.lock.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(parent) = self.path.parent() {
-            fs::create_dir_all(parent).map_err(|e| DomainError::provider(format!("cannot create config dir: {e}")))?;
+            fs::create_dir_all(parent)
+                .map_err(|e| DomainError::provider(format!("cannot create config dir: {e}")))?;
         }
         let json = serde_json::to_vec_pretty(&StoredPreferences::from(preferences))
             .map_err(|e| DomainError::provider(e.to_string()))?;
         let tmp = self.path.with_extension("json.tmp");
-        fs::write(&tmp, json).map_err(|e| DomainError::provider(format!("cannot write preferences: {e}")))?;
-        fs::rename(&tmp, &self.path).map_err(|e| DomainError::provider(format!("cannot save preferences: {e}")))
+        fs::write(&tmp, json)
+            .map_err(|e| DomainError::provider(format!("cannot write preferences: {e}")))?;
+        fs::rename(&tmp, &self.path)
+            .map_err(|e| DomainError::provider(format!("cannot save preferences: {e}")))
     }
 }
 

@@ -33,7 +33,12 @@ pub trait CalendarStore: Send + Sync {
 pub trait EventRepository: Send + Sync {
     fn events(&self, query: &EventQuery) -> DomainResult<Vec<Event>>;
     fn create_event(&self, draft: EventDraft) -> DomainResult<Event>;
-    fn update_event(&self, id: &EventId, draft: EventDraft, scope: RecurrenceScope) -> DomainResult<Event>;
+    fn update_event(
+        &self,
+        id: &EventId,
+        draft: EventDraft,
+        scope: RecurrenceScope,
+    ) -> DomainResult<Event>;
     fn delete_event(&self, id: &EventId, scope: RecurrenceScope) -> DomainResult<()>;
 }
 

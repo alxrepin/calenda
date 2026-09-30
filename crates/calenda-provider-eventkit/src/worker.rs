@@ -24,7 +24,11 @@ pub(crate) struct Store {
 
 impl Store {
     fn new(listeners: Listeners) -> Self {
-        let mut this = Self { store: unsafe { EKEventStore::new() }, listeners, observer: None };
+        let mut this = Self {
+            store: unsafe { EKEventStore::new() },
+            listeners,
+            observer: None,
+        };
         this.observe_changes();
         this
     }
@@ -39,12 +43,14 @@ impl Store {
 
     fn observe_changes(&mut self) {
         let listeners = Arc::clone(&self.listeners);
-        let block = block2::RcBlock::new(move |_notification: std::ptr::NonNull<objc2_foundation::NSNotification>| {
-            let guard = listeners.lock().unwrap_or_else(|e| e.into_inner());
-            for (_, listener) in guard.iter() {
-                listener();
-            }
-        });
+        let block = block2::RcBlock::new(
+            move |_notification: std::ptr::NonNull<objc2_foundation::NSNotification>| {
+                let guard = listeners.lock().unwrap_or_else(|e| e.into_inner());
+                for (_, listener) in guard.iter() {
+                    listener();
+                }
+            },
+        );
         let center = NSNotificationCenter::defaultCenter();
         let observer = unsafe {
             center.addObserverForName_object_queue_usingBlock(

@@ -27,13 +27,19 @@ pub struct InMemoryPreferences {
 
 impl InMemoryPreferences {
     pub fn new(preferences: Preferences) -> Self {
-        Self { inner: RwLock::new(preferences) }
+        Self {
+            inner: RwLock::new(preferences),
+        }
     }
 }
 
 impl PreferencesRepository for InMemoryPreferences {
     fn load(&self) -> DomainResult<Preferences> {
-        Ok(self.inner.read().expect("preferences lock poisoned").clone())
+        Ok(self
+            .inner
+            .read()
+            .expect("preferences lock poisoned")
+            .clone())
     }
 
     fn save(&self, preferences: &Preferences) -> DomainResult<()> {

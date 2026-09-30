@@ -21,6 +21,36 @@ pub struct AppState {
     _subscription: Box<dyn Subscription>,
 }
 
+impl AppState {
+    pub fn new(service: Arc<AgendaService>, subscription: Box<dyn Subscription>) -> Self {
+        Self {
+            service,
+            _subscription: subscription,
+        }
+    }
+}
+
+/// The command table, shared by the real app and the IPC tests.
+pub fn command_handler<R: tauri::Runtime>(
+) -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
+    tauri::generate_handler![
+        commands::load_workspace,
+        commands::set_calendar_visible,
+        commands::set_show_reminders_in_grid,
+        commands::list_events,
+        commands::create_event,
+        commands::update_event,
+        commands::delete_event,
+        commands::move_event,
+        commands::list_reminders,
+        commands::create_reminder,
+        commands::update_reminder,
+        commands::set_reminder_completed,
+        commands::delete_reminder,
+        commands::search,
+    ]
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -43,25 +73,10 @@ pub fn run() {
                 }
             }));
 
-            app.manage(AppState { service, _subscription: subscription });
+            app.manage(AppState::new(service, subscription));
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            commands::load_workspace,
-            commands::set_calendar_visible,
-            commands::set_show_reminders_in_grid,
-            commands::list_events,
-            commands::create_event,
-            commands::update_event,
-            commands::delete_event,
-            commands::move_event,
-            commands::list_reminders,
-            commands::create_reminder,
-            commands::update_reminder,
-            commands::set_reminder_completed,
-            commands::delete_reminder,
-            commands::search,
-        ])
+        .invoke_handler(command_handler())
         .run(tauri::generate_context!())
         .expect("error while running Calenda");
 }

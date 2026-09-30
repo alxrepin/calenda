@@ -38,7 +38,12 @@ pub fn instant(date: &NSDate) -> DateTime<Utc> {
 }
 
 pub fn error(err: &NSError) -> DomainError {
-    DomainError::provider(format!("{} ({}:{})", err.localizedDescription(), err.domain(), err.code()))
+    DomainError::provider(format!(
+        "{} ({}:{})",
+        err.localizedDescription(),
+        err.domain(),
+        err.code()
+    ))
 }
 
 /// Local midnight at the start of `date`.
@@ -117,7 +122,11 @@ fn calendar_color(calendar: &EKCalendar) -> Color {
         return fallback;
     };
     let channel = |v: f64| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
-    Color::from_rgb(channel(rgb.redComponent()), channel(rgb.greenComponent()), channel(rgb.blueComponent()))
+    Color::from_rgb(
+        channel(rgb.redComponent()),
+        channel(rgb.greenComponent()),
+        channel(rgb.blueComponent()),
+    )
 }
 
 // ---- events ---------------------------------------------------------------
@@ -125,7 +134,9 @@ fn calendar_color(calendar: &EKCalendar) -> Color {
 /// Encodes an occurrence identity. Recurring occurrences share an
 /// `eventIdentifier`, so the occurrence date is appended to tell them apart.
 pub fn event_id(event: &EKEvent) -> EventId {
-    let base = unsafe { event.eventIdentifier() }.map(|s| s.to_string()).unwrap_or_default();
+    let base = unsafe { event.eventIdentifier() }
+        .map(|s| s.to_string())
+        .unwrap_or_default();
     match unsafe { event.occurrenceDate() } {
         Some(date) if unsafe { event.hasRecurrenceRules() } || unsafe { event.isDetached() } => {
             EventId::new(format!("{base}@{}", instant(&date).timestamp()))
@@ -156,7 +167,11 @@ pub fn event(event: &EKEvent, read_only_calendar: bool) -> DomainResult<Event> {
         EventTime::AllDay(DateSpan::new(first, last)?)
     } else {
         // Zero-length events exist in the wild; give them a minute so they draw.
-        let end = if end <= start { start + chrono::Duration::minutes(1) } else { end };
+        let end = if end <= start {
+            start + chrono::Duration::minutes(1)
+        } else {
+            end
+        };
         EventTime::Timed(TimeRange::new(start, end)?)
     };
     let calendar_id = unsafe { event.calendar() }
@@ -169,7 +184,9 @@ pub fn event(event: &EKEvent, read_only_calendar: bool) -> DomainResult<Event> {
         time,
         location: opt_string(unsafe { event.location() }),
         notes: opt_string(unsafe { event.notes() }),
-        url: unsafe { event.URL() }.and_then(|u| u.absoluteString()).map(|s| s.to_string()),
+        url: unsafe { event.URL() }
+            .and_then(|u| u.absoluteString())
+            .map(|s| s.to_string()),
         is_recurring: unsafe { event.hasRecurrenceRules() } || unsafe { event.isDetached() },
         read_only: read_only_calendar,
     })
@@ -194,7 +211,9 @@ pub fn reminder(reminder: &EKReminder) -> Reminder {
         list_id: CalendarId::new(list_id),
         title: unsafe { reminder.title() }.to_string(),
         notes: opt_string(unsafe { reminder.notes() }),
-        url: unsafe { reminder.URL() }.and_then(|u| u.absoluteString()).map(|s| s.to_string()),
+        url: unsafe { reminder.URL() }
+            .and_then(|u| u.absoluteString())
+            .map(|s| s.to_string()),
         due: unsafe { reminder.dueDateComponents() }.and_then(|c| due(&c)),
         priority: Priority::from_rfc5545(unsafe { reminder.priority() } as u32),
         completed_at: unsafe { reminder.completionDate() }.map(|d| instant(&d)),
@@ -237,7 +256,10 @@ pub fn due_components(due: &Due) -> Retained<NSDateComponents> {
 pub fn due_instant(due: &Due) -> Option<DateTime<Utc>> {
     let time = due.time?;
     let naive = due.date.and_time(time);
-    Local.from_local_datetime(&naive).earliest().map(|d| d.with_timezone(&Utc))
+    Local
+        .from_local_datetime(&naive)
+        .earliest()
+        .map(|d| d.with_timezone(&Utc))
 }
 
 use chrono::{Datelike, Timelike};

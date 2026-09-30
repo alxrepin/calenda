@@ -10,9 +10,9 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use calenda_domain::{
     AccessGateway, AccessStatus, Calendar, CalendarKind, CalendarProvider, CalendarStore,
-    ChangeListener, ChangeNotifier, CompletionFilter, DomainError, DomainResult, Event,
-    EventDraft, EventId, EventQuery, EventRepository, EventTime, RecurrenceScope, Reminder,
-    ReminderDraft, ReminderId, ReminderQuery, ReminderRepository, Source, Subscription,
+    ChangeListener, ChangeNotifier, CompletionFilter, DomainError, DomainResult, Event, EventDraft,
+    EventId, EventQuery, EventRepository, EventTime, RecurrenceScope, Reminder, ReminderDraft,
+    ReminderId, ReminderQuery, ReminderRepository, Source, Subscription,
 };
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 
@@ -54,7 +54,11 @@ impl MockProvider {
         provider
     }
 
-    pub fn with_sources_and_calendars(self, sources: Vec<Source>, calendars: Vec<Calendar>) -> Self {
+    pub fn with_sources_and_calendars(
+        self,
+        sources: Vec<Source>,
+        calendars: Vec<Calendar>,
+    ) -> Self {
         {
             let mut state = self.state.write().unwrap();
             state.sources = sources;
@@ -64,11 +68,19 @@ impl MockProvider {
     }
 
     pub fn insert_event(&self, event: Event) {
-        self.state.write().unwrap().events.insert(event.id.clone(), event);
+        self.state
+            .write()
+            .unwrap()
+            .events
+            .insert(event.id.clone(), event);
     }
 
     pub fn insert_reminder(&self, reminder: Reminder) {
-        self.state.write().unwrap().reminders.insert(reminder.id.clone(), reminder);
+        self.state
+            .write()
+            .unwrap()
+            .reminders
+            .insert(reminder.id.clone(), reminder);
     }
 
     fn notify(&self) {
@@ -84,7 +96,10 @@ impl MockProvider {
             .iter()
             .find(|c| &c.id == id)
             .cloned()
-            .ok_or_else(|| DomainError::NotFound { entity: "calendar", id: id.to_string() })
+            .ok_or_else(|| DomainError::NotFound {
+                entity: "calendar",
+                id: id.to_string(),
+            })
     }
 
     fn new_id() -> String {
@@ -175,7 +190,12 @@ impl EventRepository for MockProvider {
         Ok(event)
     }
 
-    fn update_event(&self, id: &EventId, draft: EventDraft, _scope: RecurrenceScope) -> DomainResult<Event> {
+    fn update_event(
+        &self,
+        id: &EventId,
+        draft: EventDraft,
+        _scope: RecurrenceScope,
+    ) -> DomainResult<Event> {
         let event = {
             let mut state = self.state.write().unwrap();
             let calendar = self.calendar(&state, &draft.calendar_id)?;
@@ -185,7 +205,10 @@ impl EventRepository for MockProvider {
             let existing = state
                 .events
                 .get_mut(id)
-                .ok_or_else(|| DomainError::NotFound { entity: "event", id: id.to_string() })?;
+                .ok_or_else(|| DomainError::NotFound {
+                    entity: "event",
+                    id: id.to_string(),
+                })?;
             if existing.read_only {
                 return Err(DomainError::ReadOnly { entity: "event" });
             }
@@ -204,10 +227,10 @@ impl EventRepository for MockProvider {
     fn delete_event(&self, id: &EventId, _scope: RecurrenceScope) -> DomainResult<()> {
         {
             let mut state = self.state.write().unwrap();
-            let existing = state
-                .events
-                .get(id)
-                .ok_or_else(|| DomainError::NotFound { entity: "event", id: id.to_string() })?;
+            let existing = state.events.get(id).ok_or_else(|| DomainError::NotFound {
+                entity: "event",
+                id: id.to_string(),
+            })?;
             if existing.read_only {
                 return Err(DomainError::ReadOnly { entity: "event" });
             }
@@ -220,7 +243,10 @@ impl EventRepository for MockProvider {
 
 fn sort_key(time: &EventTime) -> (u8, DateTime<Utc>) {
     match time {
-        EventTime::AllDay(span) => (0, Utc.from_utc_datetime(&span.first().and_hms_opt(0, 0, 0).unwrap())),
+        EventTime::AllDay(span) => (
+            0,
+            Utc.from_utc_datetime(&span.first().and_hms_opt(0, 0, 0).unwrap()),
+        ),
         EventTime::Timed(range) => (1, range.start()),
     }
 }
@@ -243,7 +269,11 @@ impl ReminderRepository for MockProvider {
             })
             .cloned()
             .collect();
-        found.sort_by(|a, b| a.due.map(|d| (d.date, d.time)).cmp(&b.due.map(|d| (d.date, d.time))));
+        found.sort_by(|a, b| {
+            a.due
+                .map(|d| (d.date, d.time))
+                .cmp(&b.due.map(|d| (d.date, d.time)))
+        });
         Ok(found)
     }
 
@@ -252,7 +282,9 @@ impl ReminderRepository for MockProvider {
             let mut state = self.state.write().unwrap();
             let list = self.calendar(&state, &draft.list_id)?;
             if list.kind != CalendarKind::Reminders {
-                return Err(DomainError::invalid("reminders must belong to a reminder list"));
+                return Err(DomainError::invalid(
+                    "reminders must belong to a reminder list",
+                ));
             }
             if list.read_only {
                 return Err(DomainError::ReadOnly { entity: "calendar" });
@@ -268,7 +300,9 @@ impl ReminderRepository for MockProvider {
                 completed_at: None,
                 is_recurring: false,
             };
-            state.reminders.insert(reminder.id.clone(), reminder.clone());
+            state
+                .reminders
+                .insert(reminder.id.clone(), reminder.clone());
             reminder
         };
         self.notify();
@@ -282,7 +316,10 @@ impl ReminderRepository for MockProvider {
             let existing = state
                 .reminders
                 .get_mut(id)
-                .ok_or_else(|| DomainError::NotFound { entity: "reminder", id: id.to_string() })?;
+                .ok_or_else(|| DomainError::NotFound {
+                    entity: "reminder",
+                    id: id.to_string(),
+                })?;
             existing.list_id = draft.list_id;
             existing.title = draft.title;
             existing.notes = draft.notes;
@@ -301,7 +338,10 @@ impl ReminderRepository for MockProvider {
             let existing = state
                 .reminders
                 .get_mut(id)
-                .ok_or_else(|| DomainError::NotFound { entity: "reminder", id: id.to_string() })?;
+                .ok_or_else(|| DomainError::NotFound {
+                    entity: "reminder",
+                    id: id.to_string(),
+                })?;
             existing.completed_at = if completed { Some(Utc::now()) } else { None };
             existing.clone()
         };
@@ -312,7 +352,10 @@ impl ReminderRepository for MockProvider {
     fn delete_reminder(&self, id: &ReminderId) -> DomainResult<()> {
         let removed = self.state.write().unwrap().reminders.remove(id);
         if removed.is_none() {
-            return Err(DomainError::NotFound { entity: "reminder", id: id.to_string() });
+            return Err(DomainError::NotFound {
+                entity: "reminder",
+                id: id.to_string(),
+            });
         }
         self.notify();
         Ok(())
@@ -328,7 +371,10 @@ impl Subscription for MockSubscription {}
 
 impl Drop for MockSubscription {
     fn drop(&mut self) {
-        self.listeners.lock().unwrap().retain(|(id, _)| *id != self.id);
+        self.listeners
+            .lock()
+            .unwrap()
+            .retain(|(id, _)| *id != self.id);
     }
 }
 
@@ -340,7 +386,10 @@ impl ChangeNotifier for MockProvider {
             *next
         };
         self.listeners.lock().unwrap().push((id, listener));
-        Box::new(MockSubscription { id, listeners: Arc::clone(&self.listeners) })
+        Box::new(MockSubscription {
+            id,
+            listeners: Arc::clone(&self.listeners),
+        })
     }
 }
 
@@ -380,7 +429,12 @@ mod tests {
     #[test]
     fn events_query_matches_timed_overlap_and_all_day_dates() {
         let p = MockProvider::seeded(day(30));
-        let cal = p.calendars().unwrap().into_iter().find(|c| c.kind == CalendarKind::Events).unwrap();
+        let cal = p
+            .calendars()
+            .unwrap()
+            .into_iter()
+            .find(|c| c.kind == CalendarKind::Events)
+            .unwrap();
         p.insert_event(Event {
             id: EventId::new("allday"),
             calendar_id: cal.id.clone(),
@@ -404,7 +458,10 @@ mod tests {
             read_only: false,
         });
 
-        let q = |r| EventQuery { range: r, calendars: Some(vec![cal.id.clone()]) };
+        let q = |r| EventQuery {
+            range: r,
+            calendars: Some(vec![cal.id.clone()]),
+        };
         let titles = |events: Vec<Event>| events.into_iter().map(|e| e.title).collect::<Vec<_>>();
 
         // Window ending exactly at midnight on the 3rd must not include the trip.
@@ -421,7 +478,12 @@ mod tests {
     #[test]
     fn mutations_notify_subscribers_until_unsubscribed() {
         let p = MockProvider::seeded(day(30));
-        let list = p.calendars().unwrap().into_iter().find(|c| c.kind == CalendarKind::Reminders).unwrap();
+        let list = p
+            .calendars()
+            .unwrap()
+            .into_iter()
+            .find(|c| c.kind == CalendarKind::Reminders)
+            .unwrap();
         let hits = Arc::new(AtomicUsize::new(0));
         let sub = {
             let hits = Arc::clone(&hits);
@@ -449,7 +511,12 @@ mod tests {
     #[test]
     fn completed_filter_respects_since() {
         let p = MockProvider::seeded(day(30));
-        let list = p.calendars().unwrap().into_iter().find(|c| c.kind == CalendarKind::Reminders).unwrap();
+        let list = p
+            .calendars()
+            .unwrap()
+            .into_iter()
+            .find(|c| c.kind == CalendarKind::Reminders)
+            .unwrap();
         let old = Reminder {
             id: ReminderId::new("old"),
             list_id: list.id.clone(),
@@ -469,14 +536,24 @@ mod tests {
             })
             .unwrap();
         assert!(!recent.iter().any(|r| r.title == "Old"));
-        let all = p.reminders(&ReminderQuery { completion: CompletionFilter::All, lists: None }).unwrap();
+        let all = p
+            .reminders(&ReminderQuery {
+                completion: CompletionFilter::All,
+                lists: None,
+            })
+            .unwrap();
         assert!(all.iter().any(|r| r.title == "Old"));
     }
 
     #[test]
     fn writes_to_read_only_calendars_are_refused() {
         let p = MockProvider::seeded(day(30));
-        let ro = p.calendars().unwrap().into_iter().find(|c| c.read_only).expect("seed has a read-only calendar");
+        let ro = p
+            .calendars()
+            .unwrap()
+            .into_iter()
+            .find(|c| c.read_only)
+            .expect("seed has a read-only calendar");
         let err = p
             .create_event(EventDraft {
                 calendar_id: ro.id,

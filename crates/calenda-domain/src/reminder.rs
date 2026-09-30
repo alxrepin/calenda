@@ -21,7 +21,10 @@ impl Due {
     }
 
     pub fn at(date: NaiveDate, time: NaiveTime) -> Self {
-        Self { date, time: Some(time) }
+        Self {
+            date,
+            time: Some(time),
+        }
     }
 }
 
@@ -120,7 +123,12 @@ mod tests {
 
     #[test]
     fn priority_round_trips_through_rfc5545() {
-        for p in [Priority::None, Priority::Low, Priority::Medium, Priority::High] {
+        for p in [
+            Priority::None,
+            Priority::Low,
+            Priority::Medium,
+            Priority::High,
+        ] {
             assert_eq!(Priority::from_rfc5545(p.to_rfc5545()), p);
         }
         assert_eq!(Priority::from_rfc5545(3), Priority::High);

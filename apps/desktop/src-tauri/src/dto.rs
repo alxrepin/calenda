@@ -3,9 +3,9 @@
 
 use calenda_app::{Preferences, SearchResults, Workspace};
 use calenda_domain::{
-    AccessStatus, Calendar, CalendarId, CalendarKind, DateSpan, DomainError, DomainResult,
-    Due, Event, EventDraft, EventId, EventTime, Priority, RecurrenceScope, Reminder,
-    ReminderDraft, Source, SourceKind, TimeRange,
+    AccessStatus, Calendar, CalendarId, CalendarKind, DateSpan, DomainError, DomainResult, Due,
+    Event, EventDraft, EventId, EventTime, Priority, RecurrenceScope, Reminder, ReminderDraft,
+    Source, SourceKind, TimeRange,
 };
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -28,13 +28,19 @@ impl From<DomainError> for CommandError {
             DomainError::Invalid(_) => "invalid",
             DomainError::Provider(_) => "provider",
         };
-        Self { kind, message: err.to_string() }
+        Self {
+            kind,
+            message: err.to_string(),
+        }
     }
 }
 
 impl From<tauri::Error> for CommandError {
     fn from(err: tauri::Error) -> Self {
-        Self { kind: "shell", message: err.to_string() }
+        Self {
+            kind: "shell",
+            message: err.to_string(),
+        }
     }
 }
 
@@ -93,7 +99,11 @@ impl From<Source> for SourceDto {
             SourceKind::Birthdays => SourceKindDto::Birthdays,
             SourceKind::Other => SourceKindDto::Other,
         };
-        Self { id: s.id.to_string(), title: s.title, kind }
+        Self {
+            id: s.id.to_string(),
+            title: s.title,
+            kind,
+        }
     }
 }
 
@@ -183,7 +193,8 @@ pub fn parse_instant(value: &str) -> DomainResult<DateTime<Utc>> {
 }
 
 pub fn parse_date(value: &str) -> DomainResult<NaiveDate> {
-    NaiveDate::parse_from_str(value, DATE_FORMAT).map_err(|e| DomainError::invalid(format!("bad date {value:?}: {e}")))
+    NaiveDate::parse_from_str(value, DATE_FORMAT)
+        .map_err(|e| DomainError::invalid(format!("bad date {value:?}: {e}")))
 }
 
 fn parse_time(value: &str) -> DomainResult<NaiveTime> {
@@ -208,7 +219,10 @@ pub enum EventTimeDto {
 impl From<&EventTime> for EventTimeDto {
     fn from(t: &EventTime) -> Self {
         match t {
-            EventTime::Timed(r) => Self::Timed { start: format_instant(r.start()), end: format_instant(r.end()) },
+            EventTime::Timed(r) => Self::Timed {
+                start: format_instant(r.start()),
+                end: format_instant(r.end()),
+            },
             EventTime::AllDay(s) => Self::AllDay {
                 first: s.first().format(DATE_FORMAT).to_string(),
                 last: s.last().format(DATE_FORMAT).to_string(),
@@ -222,9 +236,10 @@ impl TryFrom<EventTimeDto> for EventTime {
 
     fn try_from(t: EventTimeDto) -> DomainResult<Self> {
         Ok(match t {
-            EventTimeDto::Timed { start, end } => {
-                EventTime::Timed(TimeRange::new(parse_instant(&start)?, parse_instant(&end)?)?)
-            }
+            EventTimeDto::Timed { start, end } => EventTime::Timed(TimeRange::new(
+                parse_instant(&start)?,
+                parse_instant(&end)?,
+            )?),
             EventTimeDto::AllDay { first, last } => {
                 EventTime::AllDay(DateSpan::new(parse_date(&first)?, parse_date(&last)?)?)
             }
@@ -339,7 +354,10 @@ pub struct DueDto {
 
 impl From<Due> for DueDto {
     fn from(d: Due) -> Self {
-        Self { date: d.date.format(DATE_FORMAT).to_string(), time: d.time.map(|t| t.format(TIME_FORMAT).to_string()) }
+        Self {
+            date: d.date.format(DATE_FORMAT).to_string(),
+            time: d.time.map(|t| t.format(TIME_FORMAT).to_string()),
+        }
     }
 }
 
@@ -347,7 +365,10 @@ impl TryFrom<DueDto> for Due {
     type Error = DomainError;
 
     fn try_from(d: DueDto) -> DomainResult<Self> {
-        Ok(Self { date: parse_date(&d.date)?, time: d.time.as_deref().map(parse_time).transpose()? })
+        Ok(Self {
+            date: parse_date(&d.date)?,
+            time: d.time.as_deref().map(parse_time).transpose()?,
+        })
     }
 }
 
@@ -470,31 +491,58 @@ mod tests {
 
     #[test]
     fn event_time_round_trips() {
-        let timed = EventTimeDto::Timed { start: "2026-09-30T10:00:00Z".into(), end: "2026-09-30T11:00:00Z".into() };
+        let timed = EventTimeDto::Timed {
+            start: "2026-09-30T10:00:00Z".into(),
+            end: "2026-09-30T11:00:00Z".into(),
+        };
         let domain: EventTime = timed.try_into().unwrap();
         let back: EventTimeDto = (&domain).into();
-        assert_eq!(serde_json::to_string(&back).unwrap(), r#"{"kind":"timed","start":"2026-09-30T10:00:00Z","end":"2026-09-30T11:00:00Z"}"#);
+        assert_eq!(
+            serde_json::to_string(&back).unwrap(),
+            r#"{"kind":"timed","start":"2026-09-30T10:00:00Z","end":"2026-09-30T11:00:00Z"}"#
+        );
 
-        let all_day = EventTimeDto::AllDay { first: "2026-09-28".into(), last: "2026-09-29".into() };
+        let all_day = EventTimeDto::AllDay {
+            first: "2026-09-28".into(),
+            last: "2026-09-29".into(),
+        };
         let domain: EventTime = all_day.try_into().unwrap();
         assert!(domain.is_all_day());
     }
 
     #[test]
     fn invalid_dates_become_invalid_errors() {
-        let bad = EventTimeDto::AllDay { first: "2026-09-30".into(), last: "2026-09-29".into() };
-        assert!(matches!(EventTime::try_from(bad), Err(DomainError::Invalid(_))));
-        let bad = EventTimeDto::Timed { start: "nope".into(), end: "2026-09-30T11:00:00Z".into() };
-        assert!(matches!(EventTime::try_from(bad), Err(DomainError::Invalid(_))));
+        let bad = EventTimeDto::AllDay {
+            first: "2026-09-30".into(),
+            last: "2026-09-29".into(),
+        };
+        assert!(matches!(
+            EventTime::try_from(bad),
+            Err(DomainError::Invalid(_))
+        ));
+        let bad = EventTimeDto::Timed {
+            start: "nope".into(),
+            end: "2026-09-30T11:00:00Z".into(),
+        };
+        assert!(matches!(
+            EventTime::try_from(bad),
+            Err(DomainError::Invalid(_))
+        ));
     }
 
     #[test]
     fn due_accepts_missing_time() {
         let json = r#"{"date":"2026-10-02"}"#;
-        let due: Due = serde_json::from_str::<DueDto>(json).unwrap().try_into().unwrap();
+        let due: Due = serde_json::from_str::<DueDto>(json)
+            .unwrap()
+            .try_into()
+            .unwrap();
         assert_eq!(due.time, None);
         let json = r#"{"date":"2026-10-02","time":"14:30"}"#;
-        let due: Due = serde_json::from_str::<DueDto>(json).unwrap().try_into().unwrap();
+        let due: Due = serde_json::from_str::<DueDto>(json)
+            .unwrap()
+            .try_into()
+            .unwrap();
         assert_eq!(due.time.unwrap().format("%H:%M").to_string(), "14:30");
     }
 }

@@ -45,7 +45,10 @@ impl TimeRange {
 
     /// Moves the range so it starts at `start`, preserving its duration.
     pub fn moved_to(&self, start: DateTime<Utc>) -> Self {
-        Self { start, end: start + self.duration() }
+        Self {
+            start,
+            end: start + self.duration(),
+        }
     }
 }
 
@@ -59,13 +62,18 @@ pub struct DateSpan {
 impl DateSpan {
     pub fn new(first: NaiveDate, last: NaiveDate) -> DomainResult<Self> {
         if last < first {
-            return Err(DomainError::invalid("date span must not end before it starts"));
+            return Err(DomainError::invalid(
+                "date span must not end before it starts",
+            ));
         }
         Ok(Self { first, last })
     }
 
     pub fn single(day: NaiveDate) -> Self {
-        Self { first: day, last: day }
+        Self {
+            first: day,
+            last: day,
+        }
     }
 
     pub fn first(&self) -> NaiveDate {
@@ -91,7 +99,10 @@ impl DateSpan {
 
     /// Moves the span so it begins on `first`, preserving its length.
     pub fn moved_to(&self, first: NaiveDate) -> Self {
-        Self { first, last: first + Duration::days(self.days() - 1) }
+        Self {
+            first,
+            last: first + Duration::days(self.days() - 1),
+        }
     }
 }
 
