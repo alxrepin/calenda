@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>Calenda shows and edits the events in your calendars.</string>
+  <key>NSRemindersFullAccessUsageDescription</key>
+  <string>Calenda shows and edits your reminders next to your calendar.</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>Calenda shows and edits the events in your calendars.</string>
+  <key>NSRemindersUsageDescription</key>
+  <string>Calenda shows and edits your reminders next to your calendar.</string>
+</dict>
+</plist>

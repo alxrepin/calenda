@@ -1,0 +1,14 @@
+{
+  "name": "calenda",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --filter @calenda/desktop dev",
+    "tauri": "pnpm --filter @calenda/desktop tauri",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  }
+}

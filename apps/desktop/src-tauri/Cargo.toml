@@ -1,0 +1,29 @@
+[package]
+name = "calenda-desktop"
+description = "Calenda desktop shell (Tauri)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "calenda_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+calenda-domain.workspace = true
+calenda-app.workspace = true
+calenda-provider-mock.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-log = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+calenda-provider-eventkit.workspace = true

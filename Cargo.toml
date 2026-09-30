@@ -1,0 +1,36 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/calenda-domain",
+    "crates/calenda-app",
+    "crates/calenda-provider-mock",
+    "crates/calenda-provider-eventkit",
+    "apps/desktop/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.80"
+
+[workspace.dependencies]
+calenda-domain = { path = "crates/calenda-domain" }
+calenda-app = { path = "crates/calenda-app" }
+calenda-provider-mock = { path = "crates/calenda-provider-mock" }
+calenda-provider-eventkit = { path = "crates/calenda-provider-eventkit" }
+
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+parking_lot = "0.12"
+log = "0.4"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

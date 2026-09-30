@@ -1,0 +1,14 @@
+[package]
+name = "calenda-app"
+description = "Calenda application layer: use cases over the domain ports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+calenda-domain.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+calenda-provider-mock.workspace = true

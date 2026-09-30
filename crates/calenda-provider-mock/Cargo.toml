@@ -1,0 +1,12 @@
+[package]
+name = "calenda-provider-mock"
+description = "In-memory CalendarProvider with seed data, for development and tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+calenda-domain.workspace = true
+chrono.workspace = true
+uuid.workspace = true
